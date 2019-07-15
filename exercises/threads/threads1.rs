@@ -5,7 +5,7 @@
 // of "waiting..." and the program ends without timing out the playground,
 // you've got it :)
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -14,16 +14,18 @@ struct JobStatus {
 }
 
 fn main() {
-    let status = Arc::new(JobStatus { jobs_completed: 0 });
-    let status_shared = status.clone();
+    let status = Arc::new(Mutex::new(JobStatus { jobs_completed: 0 }));
+    let status_shared = Arc::clone(&status);
     thread::spawn(move || {
         for _ in 0..10 {
             thread::sleep(Duration::from_millis(250));
-            status_shared.jobs_completed += 1;
+            let mut shared = status_shared.lock().unwrap();
+            shared.jobs_completed += 4;
+            // status_shared.lock().unwrap().jobs_completed += 2;
         }
     });
-    while status.jobs_completed < 10 {
-        println!("waiting... ");
+    while status.lock().unwrap().jobs_completed < 10 {
+        println!("waiting... {:?}", status.lock().unwrap().jobs_completed);
         thread::sleep(Duration::from_millis(500));
     }
 }
